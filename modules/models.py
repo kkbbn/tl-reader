@@ -61,6 +61,7 @@ class RawEvent:
 class TimelineEvent:
     index: int
     video_time: float
+    battle_time: float | None
     before_time: float
     after_time: float
     cost: float

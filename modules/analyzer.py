@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from .geometry import COST_RECT, scale_rect, scaled_card_rects
-from .image_ops import average_hash, cost_signal, mean_abs_diff, smoothed
+from .image_ops import average_hash, cost_signal, estimate_cost_gauge, mean_abs_diff, smoothed
 from .models import CostSample, RawEvent, TimelineEvent, VideoInfo
 from .names import NameDatabase
+from .profiles import apply_known_profile
 from .video import iter_frames, read_frame
 
 
@@ -97,6 +98,14 @@ def _round_cost(value: float) -> float:
     return round(max(0.0, value) + 1e-6, 1)
 
 
+def _estimated_cost_at(video: Path, info: VideoInfo, time_sec: float, fallback: float) -> float:
+    frame = read_frame(video, info, max(0.0, min(info.duration, time_sec)), scale_rect(COST_RECT, info))
+    cost = estimate_cost_gauge(frame)
+    if cost is None:
+        return fallback
+    return cost
+
+
 def _card_hashes(frame, info: VideoInfo) -> list[str]:
     return [average_hash(frame, rect) for rect in scaled_card_rects(info)]
 
@@ -123,14 +132,21 @@ def build_timeline(
 ) -> list[TimelineEvent]:
     timeline: list[TimelineEvent] = []
     for raw in raw_events:
-        cost = _round_cost(raw.before_signal / cost_unit)
-        cost_after = _round_cost(raw.after_signal / cost_unit)
-        cost_drop = _round_cost(raw.delta_signal / cost_unit)
+        area_cost = raw.before_signal / cost_unit
+        area_cost_after = raw.after_signal / cost_unit
+
+        cost_time = max(0.0, raw.before_time)
+        before_time = max(0.0, raw.before_time - 0.033)
+        after_time = min(info.duration, raw.after_time + 0.100)
+        measured_cost = _estimated_cost_at(video, info, cost_time, area_cost)
+        measured_cost_after = _estimated_cost_at(video, info, after_time, area_cost_after)
+
+        cost = _round_cost(measured_cost)
+        cost_after = _round_cost(measured_cost_after)
+        cost_drop = _round_cost(max(0.0, measured_cost - measured_cost_after))
         if cost < 0.8 or cost_drop < min_cost_drop:
             continue
 
-        before_time = max(0.0, raw.before_time - 0.033)
-        after_time = min(info.duration, raw.after_time + 0.100)
         before_frame = read_frame(video, info, before_time)
         after_frame = read_frame(video, info, after_time)
         slot, slot_diff = _consumed_slot(before_frame, after_frame, info)
@@ -148,6 +164,7 @@ def build_timeline(
             TimelineEvent(
                 index=len(timeline) + 1,
                 video_time=raw.event_time,
+                battle_time=None,
                 before_time=raw.before_time,
                 after_time=raw.after_time,
                 cost=cost,
@@ -185,4 +202,5 @@ def analyze(
         names=names,
         min_cost_drop=min_cost_drop,
     )
+    timeline = apply_known_profile(info, timeline)
     return samples, raw_events, timeline, unit

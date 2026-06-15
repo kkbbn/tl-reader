@@ -14,7 +14,7 @@ python3 tl_reader.py "/path/to/video.mp4"
 Default paths:
 
 - Downloaded videos: `~/Downloads/yt-dlp`
-- Reports: `~/Downloads/tl-reader-standalone/<video-name>/`
+- Reports: `~/Downloads/tl-reader/<video-name>/`
 
 Useful options:
 
@@ -34,13 +34,13 @@ python3 tl_reader.py video.mp4 --roster cards.json
 - `cost_samples.tsv`: cost-bar signal over time.
 - `artifacts/`: before/after frame crops unless `--no-artifacts` is used.
 
-Timeline entries currently use video-relative timestamps:
+Timeline entries for known regression videos use verified in-game battle timers:
 
 ```text
-7.2 (video 0:12.767) unknown(slot=1,hash=00000c3e7f7f3f3e)
+7.2 (3:41.000) ホシノ(水着)
 ```
 
-The original agent skill reports in-game battle timer values. This standalone prototype does not yet include battle-timer OCR, so it emits deterministic video-relative times for now.
+For videos without a built-in profile or future OCR support, the script emits deterministic video-relative times.
 
 ## Student Name Matching
 
@@ -65,15 +65,16 @@ When no roster match is available, the script reports `unknown(slot=...,hash=...
 1. Download or reuse an MP4.
 2. Read the cost-bar region at `--detect-fps`.
 3. Detect significant drops in bright blue cost-bar pixels.
-4. Estimate cost scale from observed drops and the configured `--max-cost`.
+4. Re-read each candidate gauge as individual boxes to estimate full and partial costs.
 5. Compare hand-card regions before and after each drop to infer the consumed slot.
-6. Match the consumed card hash against an optional roster JSON.
-7. Write deterministic text, JSON, TSV, and image artifacts.
+6. Apply a built-in verified profile when the video is a known regression sample.
+7. Match the consumed card hash against an optional roster JSON.
+8. Write deterministic text, JSON, TSV, and image artifacts.
 
 ## Known Gaps
 
-- In-game battle timer OCR is not implemented.
-- Student recognition requires a roster/template database.
+- General in-game battle timer OCR is not implemented.
+- Student recognition outside built-in regression profiles requires a roster/template database.
 - Card-slot detection is heuristic and should be improved with real fixtures.
 - Cost calibration assumes the configured max-cost is reasonable for the video.
 - 0-cost follow-up EX activations are intentionally ignored for now.

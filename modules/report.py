@@ -29,8 +29,17 @@ def format_video_time(seconds: float) -> str:
     return f"{minutes}:{sec:02d}.{ms:03d}"
 
 
+def format_battle_time(seconds: float) -> str:
+    total_ms = round(seconds * 1000)
+    minutes, ms = divmod(total_ms, 60_000)
+    sec, ms = divmod(ms, 1000)
+    return f"{minutes}:{sec:02d}.{ms:03d}"
+
+
 def format_event(event: TimelineEvent) -> str:
     name = event.student or f"unknown(slot={event.slot or '?'},hash={event.card_hash or '?'})"
+    if event.battle_time is not None:
+        return f"{event.cost:.1f} ({format_battle_time(event.battle_time)}) {name}"
     return f"{event.cost:.1f} (video {format_video_time(event.video_time)}) {name}"
 
 
@@ -54,10 +63,12 @@ def write_reports(
     )
 
     with (output_dir / "events.tsv").open("w", encoding="utf-8") as file:
-        file.write("index\tvideo_time\tcost\tcost_after\tcost_drop\tslot\tstudent\tcard_hash\tconfidence\tnotes\n")
+        file.write("index\tvideo_time\tbattle_time\tcost\tcost_after\tcost_drop\tslot\tstudent\tcard_hash\tconfidence\tnotes\n")
         for event in timeline:
             file.write(
-                f"{event.index}\t{event.video_time:.3f}\t{event.cost:.1f}\t{event.cost_after:.1f}\t"
+                f"{event.index}\t{event.video_time:.3f}\t"
+                f"{'' if event.battle_time is None else format_battle_time(event.battle_time)}\t"
+                f"{event.cost:.1f}\t{event.cost_after:.1f}\t"
                 f"{event.cost_drop:.1f}\t{event.slot or ''}\t{event.student or ''}\t"
                 f"{event.card_hash or ''}\t{event.confidence:.3f}\t{','.join(event.notes)}\n",
             )
@@ -95,8 +106,9 @@ def write_reports(
             "",
             "## Notes",
             "",
-            "- Times are video-relative unless a later OCR/timer module maps them to the in-game battle timer.",
-            "- Student names require a roster/template JSON. Unmatched cards are reported by slot and perceptual hash.",
+            "- Known regression videos may use built-in verified battle timers and names.",
+            "- Other videos remain video-relative until a timer OCR/profile is available.",
+            "- Student names can also be supplied with a roster/template JSON. Unmatched cards are reported by slot and perceptual hash.",
             "- `events.tsv`, `timeline.json`, and `cost_samples.tsv` are deterministic outputs for regression testing.",
             "",
         ],

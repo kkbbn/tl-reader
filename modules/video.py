@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from .models import Frame, Rect, VideoInfo
-from .process import capture, run
+from .process import capture
 
 
 def ffprobe(video: Path) -> VideoInfo:
@@ -115,4 +115,4 @@ def save_frame_jpeg(video: Path, time_sec: float, output: Path, rect: Rect | Non
     if vf:
         cmd.extend(["-vf", ",".join(vf)])
     cmd.append(str(output))
-    run(cmd)
+    subprocess.run(cmd, text=True, check=True)

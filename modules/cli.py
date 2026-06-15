@@ -16,7 +16,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("input", help="YouTube/Bilibili URL or local MP4 path")
     parser.add_argument("--download-dir", default="~/Downloads/yt-dlp", help="MP4 download/cache directory")
-    parser.add_argument("--output-root", default="~/Downloads/tl-reader-standalone", help="Report output root")
+    parser.add_argument("--output-root", default="~/Downloads/tl-reader", help="Report output root")
     parser.add_argument("--force-download", action="store_true", help="Download even if a matching MP4 exists")
     parser.add_argument("--upgrade-yt-dlp", action="store_true", help="Upgrade cached yt-dlp before downloading")
     parser.add_argument("--no-install", action="store_true", help="Do not create a yt-dlp virtualenv")
