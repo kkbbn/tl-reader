@@ -34,11 +34,28 @@ def ffprobe(video: Path) -> VideoInfo:
     )
 
 
+def _ffmpeg_crop_rect(rect: Rect, info: VideoInfo) -> Rect:
+    x = min(max(0, rect.x), max(0, info.width - 1))
+    y = min(max(0, rect.y), max(0, info.height - 1))
+    width = min(max(1, rect.width), info.width - x)
+    height = min(max(1, rect.height), info.height - y)
+
+    # Most downloaded gameplay videos are yuv420p. ffmpeg's crop filter rounds
+    # odd crop dimensions down for subsampled formats, so make the dimensions
+    # explicit before calculating raw frame sizes.
+    if width > 1 and width % 2:
+        width -= 1
+    if height > 1 and height % 2:
+        height -= 1
+    return Rect(x, y, width, height)
+
+
 def read_frame(video: Path, info: VideoInfo, time_sec: float, rect: Rect | None = None) -> Frame:
     vf = []
     width = info.width
     height = info.height
     if rect:
+        rect = _ffmpeg_crop_rect(rect, info)
         vf.append(f"crop={rect.width}:{rect.height}:{rect.x}:{rect.y}")
         width = rect.width
         height = rect.height
@@ -65,6 +82,8 @@ def read_frame(video: Path, info: VideoInfo, time_sec: float, rect: Rect | None 
 
 
 def iter_frames(video: Path, rect: Rect, fps: float, start: float = 0.0, duration: float | None = None):
+    info = ffprobe(video)
+    rect = _ffmpeg_crop_rect(rect, info)
     vf = f"crop={rect.width}:{rect.height}:{rect.x}:{rect.y},fps={fps}"
     cmd = [
         "ffmpeg",
@@ -98,6 +117,8 @@ def save_frame_jpeg(video: Path, time_sec: float, output: Path, rect: Rect | Non
     output.parent.mkdir(parents=True, exist_ok=True)
     vf = []
     if rect:
+        info = ffprobe(video)
+        rect = _ffmpeg_crop_rect(rect, info)
         vf.append(f"crop={rect.width}:{rect.height}:{rect.x}:{rect.y}")
     cmd = [
         "ffmpeg",
