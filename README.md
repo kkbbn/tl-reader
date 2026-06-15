@@ -39,11 +39,14 @@ directory is project-local and ignored by git.
 - `cost_samples.tsv`: cost-bar signal over time.
 - `artifacts/`: before/after frame crops unless `--no-artifacts` is used.
 
-Timeline entries currently use video-relative timestamps until timer OCR is implemented:
+Timeline entries use the in-game battle timer read from the right-top timer UI:
 
 ```text
-7.2 (video 0:12.767) ホシノ(水着)
+7.2 (3:40.900) ホシノ(水着)
 ```
+
+`video_time` is still written to JSON/TSV reports as a diagnostic field, but it
+is not used in `timeline.txt`.
 
 ## Student Name Matching
 
@@ -76,12 +79,12 @@ are preferable to unreproducible guesses.
 4. Re-read each candidate gauge as individual boxes to estimate full and partial costs.
 5. Compare hand-card regions before and after each drop to infer the consumed slot.
 6. Match the consumed card against an optional roster JSON, cached SchaleDB icons, and Wikiru fallback data.
-7. Leave battle time empty unless a future OCR implementation can read it.
+7. OCR the fixed-format battle timer (`MM:SS.mmm`) from the right-top timer UI.
 8. Write deterministic text, JSON, TSV, and image artifacts.
 
 ## Known Gaps
 
-- General in-game battle timer OCR is not implemented.
+- Timer OCR is specialized for the Blue Archive battle timer font and layout; it is not a general text OCR engine.
 - Card-slot detection is heuristic and should be improved with real fixtures.
 - Visual matching is deterministic, but low-resolution, greyed, or overlaid cards can still be ambiguous.
 - Cost calibration assumes the configured max-cost is reasonable for the video.

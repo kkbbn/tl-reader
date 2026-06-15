@@ -7,6 +7,7 @@ from .image_ops import average_hash, cost_signal, estimate_cost_gauge, mean_abs_
 from .models import CostSample, RawEvent, TimelineEvent, VideoInfo
 from .names import CardIdentity, NameDatabase
 from .progress import Progress
+from .timer_ocr import read_battle_timer
 from .video import iter_frames, read_frame
 
 
@@ -232,6 +233,7 @@ def build_timeline(
         after_time = min(info.duration, raw.after_time + 0.100)
         measured_cost = _estimated_cost_at(video, info, cost_time, area_cost)
         measured_cost_after = _estimated_cost_at(video, info, after_time, area_cost_after)
+        battle_time = read_battle_timer(video, info, raw.event_time)
 
         cost = _round_cost(measured_cost)
         cost_after = _round_cost(measured_cost_after)
@@ -273,6 +275,8 @@ def build_timeline(
         notes: list[str] = []
         if slot is None:
             notes.append("consumed_slot_unresolved")
+        if battle_time is None:
+            notes.append("timer_ocr_failed")
         if identity is None:
             notes.append("student_unmatched")
         elif identity.source == "wikiru" and identity.score is not None:
@@ -292,7 +296,7 @@ def build_timeline(
             TimelineEvent(
                 index=len(timeline) + 1,
                 video_time=raw.event_time,
-                battle_time=None,
+                battle_time=battle_time,
                 before_time=raw.before_time,
                 after_time=raw.after_time,
                 cost=cost,

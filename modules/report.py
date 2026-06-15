@@ -40,7 +40,7 @@ def format_event(event: TimelineEvent) -> str:
     name = event.student or f"unknown(slot={event.slot or '?'},hash={event.card_hash or '?'})"
     if event.battle_time is not None:
         return f"{event.cost:.1f} ({format_battle_time(event.battle_time)}) {name}"
-    return f"{event.cost:.1f} (video {format_video_time(event.video_time)}) {name}"
+    return f"{event.cost:.1f} (timer_ocr_failed) {name}"
 
 
 def write_reports(
@@ -106,7 +106,8 @@ def write_reports(
             "",
             "## Notes",
             "",
-            "- Videos remain video-relative until timer OCR is available.",
+            "- Timeline entries use the in-game battle timer read from the right-top timer UI.",
+            "- `video_time` remains in JSON/TSV outputs only as a diagnostic field.",
             "- Student names are matched from a roster JSON or cached Wikiru icons.",
             "- Unmatched cards are reported by slot and perceptual hash.",
             "- `events.tsv`, `timeline.json`, and `cost_samples.tsv` are deterministic outputs for regression testing.",
