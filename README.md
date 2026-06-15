@@ -23,7 +23,12 @@ python3 tl_reader.py video.mp4 --no-artifacts
 python3 tl_reader.py video.mp4 --detect-fps 60
 python3 tl_reader.py video.mp4 --max-cost 11
 python3 tl_reader.py video.mp4 --roster cards.json
+python3 tl_reader.py video.mp4 --refresh-wikiru
 ```
+
+The script downloads current SchaleDB student icons into `cache/schaledb/` and
+Wikiru fallback data into `cache/wikiru-icons/` on first use. The `cache/`
+directory is project-local and ignored by git.
 
 ## Outputs
 
@@ -34,17 +39,18 @@ python3 tl_reader.py video.mp4 --roster cards.json
 - `cost_samples.tsv`: cost-bar signal over time.
 - `artifacts/`: before/after frame crops unless `--no-artifacts` is used.
 
-Timeline entries for known regression videos use verified in-game battle timers:
+Timeline entries currently use video-relative timestamps until timer OCR is implemented:
 
 ```text
-7.2 (3:41.000) ホシノ(水着)
+7.2 (video 0:12.767) ホシノ(水着)
 ```
-
-For videos without a built-in profile or future OCR support, the script emits deterministic video-relative times.
 
 ## Student Name Matching
 
-Student names are not guessed from effect text. A roster/template JSON can be provided to map perceptual card hashes to names:
+Student names are not guessed from effect text. By default, the script compares
+the consumed skill-card portrait against current SchaleDB card icons, with
+Wikiru icons and metadata as fallback. A roster/template JSON can still be
+provided to override or supplement visual matching with perceptual card hashes:
 
 ```json
 {
@@ -58,7 +64,9 @@ Student names are not guessed from effect text. A roster/template JSON can be pr
 }
 ```
 
-When no roster match is available, the script reports `unknown(slot=...,hash=...)`. This is deliberate: deterministic unknowns are preferable to unreproducible guesses.
+When no roster or visual match clears the configured threshold, the script
+reports `unknown(slot=...,hash=...)`. This is deliberate: deterministic unknowns
+are preferable to unreproducible guesses.
 
 ## Current Algorithm
 
@@ -67,14 +75,14 @@ When no roster match is available, the script reports `unknown(slot=...,hash=...
 3. Detect significant drops in bright blue cost-bar pixels.
 4. Re-read each candidate gauge as individual boxes to estimate full and partial costs.
 5. Compare hand-card regions before and after each drop to infer the consumed slot.
-6. Apply a built-in verified profile when the video is a known regression sample.
-7. Match the consumed card hash against an optional roster JSON.
+6. Match the consumed card against an optional roster JSON, cached SchaleDB icons, and Wikiru fallback data.
+7. Leave battle time empty unless a future OCR implementation can read it.
 8. Write deterministic text, JSON, TSV, and image artifacts.
 
 ## Known Gaps
 
 - General in-game battle timer OCR is not implemented.
-- Student recognition outside built-in regression profiles requires a roster/template database.
 - Card-slot detection is heuristic and should be improved with real fixtures.
+- Visual matching is deterministic, but low-resolution, greyed, or overlaid cards can still be ambiguous.
 - Cost calibration assumes the configured max-cost is reasonable for the video.
 - 0-cost follow-up EX activations are intentionally ignored for now.

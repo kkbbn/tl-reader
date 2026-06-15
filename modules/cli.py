@@ -6,8 +6,10 @@ from pathlib import Path
 from .analyzer import analyze
 from .download import ensure_video
 from .names import NameDatabase
+from .progress import Progress
 from .report import format_event, make_output_dir, write_reports
 from .video import ffprobe
+from .wikiru import default_icon_cache_dir
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,12 +29,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-cost", type=float, default=11.0, help="Fallback max cost used for calibration")
     parser.add_argument("--roster", type=Path, help="Optional JSON card hash database")
     parser.add_argument("--hash-distance", type=int, default=10, help="Max hamming distance for roster hash match")
+    parser.add_argument("--cache-dir", type=Path, default=default_icon_cache_dir(), help="Wikiru icon cache directory")
+    parser.add_argument("--refresh-wikiru", action="store_true", help="Refresh downloaded SchaleDB/Wikiru student data")
+    parser.add_argument("--no-wikiru", action="store_true", help="Disable SchaleDB/Wikiru visual matching")
+    parser.add_argument("--wikiru-threshold", type=float, default=0.08, help="Minimum Wikiru visual match score")
     parser.add_argument("--no-artifacts", action="store_true", help="Skip event JPEG artifact output")
+    parser.add_argument("--quiet", action="store_true", help="Suppress progress output on stderr")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    progress = Progress(quiet=args.quiet)
+    progress.log("Resolving input video")
     video = ensure_video(
         args.input,
         Path(args.download_dir),
@@ -41,8 +50,20 @@ def main() -> int:
         no_install=args.no_install,
         extra_args=args.yt_dlp_arg,
     )
+    progress.log(f"Using video: {video}")
+    progress.log("Reading video metadata")
     info = ffprobe(video)
-    names = NameDatabase.load(args.roster, max_distance=args.hash_distance)
+    progress.log(f"Video metadata: {info.width}x{info.height}, {info.duration:.1f}s")
+    progress.log("Loading student matcher")
+    names = NameDatabase.load(
+        args.roster,
+        max_distance=args.hash_distance,
+        use_wikiru=not args.no_wikiru,
+        wikiru_cache_dir=args.cache_dir,
+        refresh_wikiru=args.refresh_wikiru,
+        wikiru_threshold=args.wikiru_threshold,
+        progress=progress,
+    )
     output_dir = make_output_dir(video, Path(args.output_root))
 
     samples, raw_events, timeline, cost_unit = analyze(
@@ -53,7 +74,9 @@ def main() -> int:
         max_cost=args.max_cost,
         min_cost_drop=args.min_cost_drop,
         names=names,
+        progress=progress,
     )
+    progress.log("Writing reports")
     write_reports(
         output_dir,
         info,
@@ -63,6 +86,7 @@ def main() -> int:
         cost_unit,
         write_artifacts=not args.no_artifacts,
     )
+    progress.log("Done")
 
     for event in timeline:
         print(format_event(event))
