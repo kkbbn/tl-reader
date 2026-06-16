@@ -1,6 +1,6 @@
 # tl-reader
 
-Standalone Python prototype for extracting Blue Archive paid EX skill timelines from gameplay videos without LLM assistance.
+Standalone Python prototype for extracting Blue Archive paid EX skill timelines from gameplay videos.
 
 The script is intentionally dependency-light: it uses Python standard library code plus external `ffmpeg`/`ffprobe`, and optionally `yt-dlp` for URL inputs. Image analysis is currently pure Python over raw RGB frames.
 
